@@ -149,7 +149,7 @@ class _DrawingPainter extends CustomPainter {
     var circleWidth = AppConstants.largeBrushSize / 2;
     developer.log('log me', name: 'my.app.category');
     developer.log('log me $circleWidth', name: 'my.app.category');
-    var vertices = createVertices(center, circleWidth * 2);
+    var vertices = createVertices(p2.offset, circleWidth * 2);
     canvas.drawVertices(vertices, BlendMode.srcIn, paint);
 
     //`
@@ -168,11 +168,14 @@ class _DrawingPainter extends CustomPainter {
   Vertices createVertices(Offset center, double radius) {
     var vertexPoints = <Offset>[];
     var maxRadians = radians(360); //2 * pi;
-    var degreStepInRadians = radians(30);
+    var degreStepInRadians = radians(45);
     vertexPoints.add(center);
 
     for (double i = 0; i < maxRadians; i += degreStepInRadians) {
-      vertexPoints.add(center + Offset(radius * cos(i), radius * sin(i)));
+      var rad2 = (radius - 20) +
+          Random().nextDouble() *
+              40; // random value between radius - 20 and radius + 20
+      vertexPoints.add(center + Offset(rad2 * cos(i), rad2 * sin(i)));
     }
 
     var indices = <int>[];
