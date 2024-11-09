@@ -23,7 +23,7 @@ class _PaintScreenState extends State<PaintScreen> {
       case DrawingTool.crayon:
         return AppConstants.largeBrushSize;
       case DrawingTool.paintbrush:
-        return AppConstants.mediumBrushSize;
+        return AppConstants.smallBrushSize;
     }
   }
 

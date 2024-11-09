@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:vector_math/vector_math.dart';
 
 import 'package:flutter/material.dart';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'tool_panel.dart';
 import '../constants.dart';
 import 'dart:developer' as developer;
@@ -31,48 +31,77 @@ class DrawingCanvas extends StatefulWidget {
 
 /// The state of the [DrawingCanvas] widget.
 class _DrawingCanvasState extends State<DrawingCanvas> {
-  List<DrawingPoint?> drawingPoints = [];
+  List<List<DrawingPoint>> drawingStrokes = [];
+  late _DrawingPainter _painter;
+  GlobalKey _customPaintKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _painter = _DrawingPainter(drawingStrokes);
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
         setState(() {
-          drawingPoints.add(
+          drawingStrokes.add([
             DrawingPoint(
               details.localPosition,
               _getPaint(),
               widget.drawingTool,
               _getPaintAlt(),
+              _getRadiusValue(),
+              colorAlt: widget.selectedColor
+                  .withOpacity(0.4 + Random().nextDouble() * 0.2),
+              offsetAlt: details.localPosition,
             ),
-          );
+          ]);
         });
+        _forceRepaint();
       },
       onPanUpdate: (details) {
         setState(() {
-          drawingPoints.add(
+          drawingStrokes.last.add(
             DrawingPoint(
               details.localPosition,
               _getPaint(),
               widget.drawingTool,
               _getPaintAlt(),
+              _getRadiusValue(),
+              colorAlt: widget.selectedColor
+                  .withOpacity(0.4 + Random().nextDouble() * 0.2),
+              offsetAlt: details.localPosition,
             ),
           );
         });
+        _forceRepaint();
       },
       onPanEnd: (details) {
-        setState(() {
-          drawingPoints.add(null);
-        });
+        _updateCachedImage();
       },
-      child: CustomPaint(
-        painter: _DrawingPainter(drawingPoints),
-        child: Container(
-          height: MediaQuery.of(context).size.height,
-          width: MediaQuery.of(context).size.width,
+      child: RepaintBoundary(
+        key: _customPaintKey,
+        child: CustomPaint(
+          painter: _painter,
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            width: MediaQuery.of(context).size.width,
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _updateCachedImage() async {
+    final size = MediaQuery.of(context).size;
+    await _painter.updateCachedImage(size);
+    setState(() {});
+  }
+
+  void _forceRepaint() {
+    _customPaintKey.currentContext?.findRenderObject()?.markNeedsPaint();
   }
 
   /// Returns a [Paint] object configured for drawing.
@@ -98,32 +127,74 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       ..blendMode = widget.blendMode;
     return paint;
   }
+
+  double _getRadiusValue() {
+    return (widget.strokeWidth - 20) + Random().nextDouble() * 40;
+  }
+
+  Offset _getAltOffset(Offset offset, Paint paint) {
+    // Change parameters to take a single Offset
+    var xRandom =
+        offset.dx + (Random().nextDouble() - 0.5) * paint.strokeWidth * 1.2;
+    var yRandom =
+        offset.dy + (Random().nextDouble() - 0.5) * paint.strokeWidth * 1.2;
+    return Offset(xRandom, yRandom);
+  }
 }
 
 /// A custom painter for drawing on the canvas.
 class _DrawingPainter extends CustomPainter {
-  final List<DrawingPoint?> drawingPoints;
+  final List<List<DrawingPoint>> drawingStrokes;
+  ui.Image? _cachedImage;
+  // Map to store random positions for each pair of points
+  final Map<String, List<Offset>> _randomPositionsCache = {};
 
   /// Creates a new instance of [_DrawingPainter] with the given points.
-  _DrawingPainter(this.drawingPoints);
+  _DrawingPainter(this.drawingStrokes);
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < drawingPoints.length - 1; i++) {
-      if (drawingPoints[i] != null && drawingPoints[i + 1] != null) {
-        switch (drawingPoints[i]!.tool) {
-          case DrawingTool.crayon:
-            _drawCrayon(canvas, drawingPoints[i]!, drawingPoints[i + 1]!, size);
-            break;
-          case DrawingTool.pencil:
-            _drawPencil(canvas, drawingPoints[i]!, drawingPoints[i + 1]!);
-            break;
-          case DrawingTool.paintbrush:
-            _drawPaintbrush(canvas, drawingPoints[i]!, drawingPoints[i + 1]!);
-            break;
-        }
+    if (_cachedImage != null) {
+      canvas.drawImage(_cachedImage!, Offset.zero, Paint());
+    }
+    _drawStroke(canvas, drawingStrokes.last, size);
+  }
+
+  void _drawStroke(Canvas canvas, List<DrawingPoint> stroke, Size size) {
+    if (stroke.isEmpty) return;
+
+    for (int i = 0; i < stroke.length - 1; i++) {
+      switch (stroke[i].tool) {
+        case DrawingTool.crayon:
+          _drawCrayon(canvas, stroke[i], stroke[i + 1], size);
+          break;
+        case DrawingTool.pencil:
+          _drawPencil(canvas, stroke[i], stroke[i + 1]);
+          break;
+        case DrawingTool.paintbrush:
+          _drawPaintbrush(canvas, stroke[i], stroke[i + 1]);
+          break;
       }
     }
+  }
+
+  Future<void> updateCachedImage(Size size) async {
+    if (drawingStrokes.isEmpty) return;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // If there's a previous cached image, draw it first
+    if (_cachedImage != null) {
+      canvas.drawImage(_cachedImage!, Offset.zero, Paint());
+    }
+
+    // Draw only the last stroke
+    _drawStroke(canvas, drawingStrokes.last, size);
+
+    final picture = recorder.endRecording();
+    _cachedImage =
+        await picture.toImage(size.width.toInt(), size.height.toInt());
   }
 
   /// Draws a line for the pencil tool.
@@ -136,16 +207,51 @@ class _DrawingPainter extends CustomPainter {
   /// Draws a circle for the paintbrush tool.
   void _drawPaintbrush(Canvas canvas, DrawingPoint p1, DrawingPoint p2) {
     final paint = p1.paint;
-    // paint.style = PaintingStyle.stroke;
-    // canvas.drawLine(p1.offset, p2.offset, paint);
-    canvas.drawCircle(p2.offset, paint.strokeWidth / 2, paint);
+    paint.style = PaintingStyle.fill;
+    p1.colorAlt ??= paint.color.withOpacity(0.4 + Random().nextDouble() * 0.2);
+    paint.color = p1.colorAlt!;
+
+    String pointPairKey = _getPointPairKey(p1, p2);
+
+    // Use cached positions if they exist, otherwise calculate new ones
+    List<Offset> randomPositions;
+    if (_randomPositionsCache.containsKey(pointPairKey)) {
+      randomPositions = _randomPositionsCache[pointPairKey]!;
+    } else {
+      var length = (sqrt(pow(p2.offset.dx - p1.offset.dx, 2) +
+                  pow(p2.offset.dy - p1.offset.dy, 2)) /
+              (5 / paint.strokeWidth))
+          .round();
+      var xUnit = (p2.offset.dx - p1.offset.dx) / length;
+      var yUnit = (p2.offset.dy - p1.offset.dy) / length;
+
+      // Calculate and store all random positions
+      randomPositions = [];
+      for (var i = 0; i < length; i++) {
+        var xCurrent = p1.offset.dx + (i * xUnit);
+        var yCurrent = p1.offset.dy + (i * yUnit);
+        var xRandom =
+            xCurrent + (Random().nextDouble() - 0.5) * paint.strokeWidth * 1.2;
+        var yRandom =
+            yCurrent + (Random().nextDouble() - 0.5) * paint.strokeWidth * 1.2;
+        randomPositions.add(Offset(xRandom, yRandom));
+      }
+
+      // Cache the calculated positions
+      _randomPositionsCache[pointPairKey] = randomPositions;
+    }
+
+    // Draw circles using the stored random positions
+    for (var position in randomPositions) {
+      canvas.drawCircle(position, paint.strokeWidth / 2, paint);
+    }
   }
 
   /// Draws a custom shape for the crayon tool.
   void _drawCrayon(Canvas canvas, DrawingPoint p1, DrawingPoint p2, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    // final center = Offset(size.width / 2, size.height / 2);
     var paint = p1.paint;
-    var paint2 = p1.paintAlt;
+    // var paint2 = p1.paintAlt;
     var circleWidth = AppConstants.largeBrushSize / 2;
     developer.log('log me', name: 'my.app.category');
     developer.log('log me $circleWidth', name: 'my.app.category');
@@ -165,17 +271,16 @@ class _DrawingPainter extends CustomPainter {
   }
 
   /// Creates vertices for drawing a custom shape.
-  Vertices createVertices(Offset center, double radius) {
+  ui.Vertices createVertices(Offset center, double radius) {
     var vertexPoints = <Offset>[];
     var maxRadians = radians(360); //2 * pi;
     var degreStepInRadians = radians(45);
     vertexPoints.add(center);
 
     for (double i = 0; i < maxRadians; i += degreStepInRadians) {
-      var rad2 = (radius - 20) +
-          Random().nextDouble() *
-              40; // random value between radius - 20 and radius + 20
-      vertexPoints.add(center + Offset(rad2 * cos(i), rad2 * sin(i)));
+      ///TODO UPDATE THIS TO PASS A LIST OF FIXED RANDOM OFFSETS
+      // // random value between radius - 20 and radius + 20
+      vertexPoints.add(center + Offset(radius * cos(i), radius * sin(i)));
     }
 
     var indices = <int>[];
@@ -189,8 +294,13 @@ class _DrawingPainter extends CustomPainter {
       }
     }
     var positionedVertices =
-        Vertices(VertexMode.triangles, vertexPoints, indices: indices);
+        ui.Vertices(VertexMode.triangles, vertexPoints, indices: indices);
     return positionedVertices;
+  }
+
+  // Generate a unique key for each pair of points
+  String _getPointPairKey(DrawingPoint p1, DrawingPoint p2) {
+    return '${p1.offset.dx},${p1.offset.dy}-${p2.offset.dx},${p2.offset.dy}';
   }
 
   @override
@@ -200,10 +310,21 @@ class _DrawingPainter extends CustomPainter {
 /// Represents a point on the canvas with its drawing properties.
 class DrawingPoint {
   Offset offset;
+  Offset? offsetAlt;
   Paint paint;
   Paint paintAlt;
+  Color? colorAlt;
+  double? radiusOffset;
   DrawingTool tool;
 
   /// Creates a new instance of [DrawingPoint] with the given properties.
-  DrawingPoint(this.offset, this.paint, this.tool, this.paintAlt);
+  DrawingPoint(
+    this.offset,
+    this.paint,
+    this.tool,
+    this.paintAlt,
+    this.radiusOffset, {
+    this.colorAlt,
+    this.offsetAlt,
+  });
 }
