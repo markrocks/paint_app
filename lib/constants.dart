@@ -10,6 +10,9 @@ class AppConstants {
   static const double defaultOpacity = 1.0;
   static const double paintbrushOpacity = 0.1;
   static const double crayonOpacity = 0.1;
+  static const double markerOpacity = 0.1;
+  static const double penOpacity = 0.1;
+  static const double waterColorOpacity = 0.1;
 
   // Color palette
   static const List<Color> defaultColors = [

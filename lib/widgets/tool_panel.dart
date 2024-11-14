@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
-enum DrawingTool { crayon, pencil, paintbrush }
+enum DrawingTool {
+  pencil,
+  crayon,
+  paintbrush,
+  marker,
+  pen,
+  waterColor,
+}
 
 class ToolPanel extends StatelessWidget {
   final DrawingTool selectedTool;
@@ -22,6 +29,10 @@ class ToolPanel extends StatelessWidget {
           _buildToolButton(DrawingTool.pencil, Icons.create, 'Pencil'),
           _buildToolButton(DrawingTool.paintbrush, Icons.brush, 'Paintbrush'),
           _buildToolButton(DrawingTool.crayon, Icons.brush_outlined, 'Crayon'),
+          _buildToolButton(DrawingTool.marker, Icons.format_paint, 'Marker'),
+          _buildToolButton(DrawingTool.pen, Icons.edit, 'Pen'),
+          _buildToolButton(
+              DrawingTool.waterColor, Icons.water_drop, 'Water Color'),
         ],
       ),
     );

@@ -174,6 +174,15 @@ class _DrawingPainter extends CustomPainter {
         case DrawingTool.paintbrush:
           _drawPaintbrush(canvas, stroke[i], stroke[i + 1]);
           break;
+        case DrawingTool.marker:
+          _drawMarker(canvas, stroke[i], stroke[i + 1]);
+          break;
+        case DrawingTool.pen:
+          _drawPen(canvas, stroke[i], stroke[i + 1]);
+          break;
+        case DrawingTool.waterColor:
+          _drawWaterColor(canvas, stroke[i], stroke[i + 1]);
+          break;
       }
     }
   }
@@ -301,6 +310,42 @@ class _DrawingPainter extends CustomPainter {
   // Generate a unique key for each pair of points
   String _getPointPairKey(DrawingPoint p1, DrawingPoint p2) {
     return '${p1.offset.dx},${p1.offset.dy}-${p2.offset.dx},${p2.offset.dy}';
+  }
+
+  /// Draws a line for the marker tool with a flat cap and semi-transparent color.
+  void _drawMarker(Canvas canvas, DrawingPoint p1, DrawingPoint p2) {
+    final paint = p1.paint;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeCap = StrokeCap.square; // Flat end for marker-like appearance
+    paint.strokeJoin = StrokeJoin.round;
+    paint.color = paint.color.withOpacity(0.7); // Semi-transparent
+    canvas.drawLine(p1.offset, p2.offset, paint);
+  }
+
+  /// Draws a thin, precise line for the pen tool.
+  void _drawPen(Canvas canvas, DrawingPoint p1, DrawingPoint p2) {
+    final paint = p1.paint;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeCap = StrokeCap.round;
+    paint.strokeJoin = StrokeJoin.round;
+    paint.strokeWidth = paint.strokeWidth * 0.5; // Thinner line for pen
+    canvas.drawLine(p1.offset, p2.offset, paint);
+  }
+
+  /// Draws a watercolor-like effect with varying opacity.
+  void _drawWaterColor(Canvas canvas, DrawingPoint p1, DrawingPoint p2) {
+    final paint = p1.paint;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeCap = StrokeCap.round;
+    paint.color = paint.color.withOpacity(0.2); // Very transparent
+
+    // Draw multiple overlapping lines with slight offsets
+    for (int i = 0; i < 3; i++) {
+      var offset = (i - 1) * 2.0;
+      var p1Offset = p1.offset + Offset(offset, offset);
+      var p2Offset = p2.offset + Offset(offset, offset);
+      canvas.drawLine(p1Offset, p2Offset, paint);
+    }
   }
 
   @override

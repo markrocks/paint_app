@@ -24,6 +24,12 @@ class _PaintScreenState extends State<PaintScreen> {
         return AppConstants.largeBrushSize;
       case DrawingTool.paintbrush:
         return AppConstants.smallBrushSize;
+      case DrawingTool.marker:
+        return AppConstants.smallBrushSize;
+      case DrawingTool.pen:
+        return AppConstants.smallBrushSize;
+      case DrawingTool.waterColor:
+        return AppConstants.smallBrushSize;
     }
   }
 
@@ -35,6 +41,12 @@ class _PaintScreenState extends State<PaintScreen> {
         return AppConstants.crayonOpacity;
       case DrawingTool.paintbrush:
         return AppConstants.paintbrushOpacity;
+      case DrawingTool.marker:
+        return AppConstants.markerOpacity;
+      case DrawingTool.pen:
+        return AppConstants.penOpacity;
+      case DrawingTool.waterColor:
+        return AppConstants.waterColorOpacity;
     }
   }
 
