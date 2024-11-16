@@ -5,7 +5,12 @@ import '../widgets/color_palette.dart';
 import '../constants.dart';
 
 class PaintScreen extends StatefulWidget {
-  const PaintScreen({Key? key}) : super(key: key);
+  final String? templateImagePath;
+
+  const PaintScreen({
+    Key? key,
+    this.templateImagePath,
+  }) : super(key: key);
 
   @override
   _PaintScreenState createState() => _PaintScreenState();
@@ -19,9 +24,9 @@ class _PaintScreenState extends State<PaintScreen> {
   double getStrokeWidth(DrawingTool tool) {
     switch (tool) {
       case DrawingTool.pencil:
-        return AppConstants.smallBrushSize;
+        return AppConstants.mediumBrushSize;
       case DrawingTool.crayon:
-        return AppConstants.largeBrushSize;
+        return AppConstants.smallBrushSize;
       case DrawingTool.paintbrush:
         return AppConstants.smallBrushSize;
       case DrawingTool.marker:
@@ -52,36 +57,86 @@ class _PaintScreenState extends State<PaintScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final sidebarWidth = screenWidth / 6;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Flutter Paint App'),
-      ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: DrawingCanvas(
-              selectedColor: selectedColor,
-              strokeWidth: getStrokeWidth(selectedTool),
-              opacity: getStrokeOpacity(selectedTool),
-              blendMode: selectedBlendMode,
-              drawingTool: selectedTool,
+          // Background Image
+          Image.asset(
+            'assets/images/background.png',
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+
+          // Template Image if provided
+          if (widget.templateImagePath != null)
+            Positioned.fill(
+              child: Image.asset(
+                widget.templateImagePath!,
+                fit: BoxFit.contain,
+              ),
             ),
-          ),
-          ColorPalette(
-            selectedColor: selectedColor,
-            onColorChanged: (color) {
-              setState(() {
-                selectedColor = color;
-              });
-            },
-          ),
-          ToolPanel(
-            selectedTool: selectedTool,
-            onToolChanged: (tool) {
-              setState(() {
-                selectedTool = tool;
-              });
-            },
+
+          // Main Content
+          Row(
+            children: [
+              // Left Sidebar
+              Container(
+                width: sidebarWidth,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/Side_banner.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ToolPanel(
+                                selectedTool: selectedTool,
+                                onToolChanged: (tool) {
+                                  setState(() {
+                                    selectedTool = tool;
+                                  });
+                                },
+                              ),
+                              ColorPalette(
+                                selectedColor: selectedColor,
+                                onColorChanged: (color) {
+                                  setState(() {
+                                    selectedColor = color;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Drawing Canvas
+              Expanded(
+                child: DrawingCanvas(
+                  selectedColor: selectedColor,
+                  strokeWidth: getStrokeWidth(selectedTool),
+                  opacity: getStrokeOpacity(selectedTool),
+                  blendMode: selectedBlendMode,
+                  drawingTool: selectedTool,
+                ),
+              ),
+            ],
           ),
         ],
       ),

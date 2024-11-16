@@ -53,8 +53,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
               widget.drawingTool,
               _getPaintAlt(),
               _getRadiusValue(),
-              colorAlt: widget.selectedColor
-                  .withOpacity(0.4 + Random().nextDouble() * 0.2),
+              // colorAlt: widget.selectedColor
+              //     .withOpacity(0.4 + Random().nextDouble() * 0.2),
               offsetAlt: details.localPosition,
             ),
           ]);
@@ -70,8 +70,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
               widget.drawingTool,
               _getPaintAlt(),
               _getRadiusValue(),
-              colorAlt: widget.selectedColor
-                  .withOpacity(0.4 + Random().nextDouble() * 0.2),
+              // colorAlt: widget.selectedColor
+              //     .withOpacity(0.4 + Random().nextDouble() * 0.2),
               offsetAlt: details.localPosition,
             ),
           );
@@ -165,14 +165,14 @@ class _DrawingPainter extends CustomPainter {
 
     for (int i = 0; i < stroke.length - 1; i++) {
       switch (stroke[i].tool) {
-        case DrawingTool.crayon:
-          _drawCrayon(canvas, stroke[i], stroke[i + 1], size);
+        case DrawingTool.paintbrush:
+          _drawPaintbrush(canvas, stroke[i], stroke[i + 1], size);
           break;
         case DrawingTool.pencil:
           _drawPencil(canvas, stroke[i], stroke[i + 1]);
           break;
-        case DrawingTool.paintbrush:
-          _drawPaintbrush(canvas, stroke[i], stroke[i + 1]);
+        case DrawingTool.crayon:
+          _drawCrayon(canvas, stroke[i], stroke[i + 1]);
           break;
         case DrawingTool.marker:
           _drawMarker(canvas, stroke[i], stroke[i + 1]);
@@ -214,10 +214,10 @@ class _DrawingPainter extends CustomPainter {
   }
 
   /// Draws a circle for the paintbrush tool.
-  void _drawPaintbrush(Canvas canvas, DrawingPoint p1, DrawingPoint p2) {
-    final paint = p1.paint;
+  void _drawCrayon(Canvas canvas, DrawingPoint p1, DrawingPoint p2) {
+    var paint = p1.paint;
     paint.style = PaintingStyle.fill;
-    p1.colorAlt ??= paint.color.withOpacity(0.4 + Random().nextDouble() * 0.2);
+    p1.colorAlt ??= paint.color.withOpacity(0.2 + Random().nextDouble() * 0.2);
     paint.color = p1.colorAlt!;
 
     String pointPairKey = _getPointPairKey(p1, p2);
@@ -252,20 +252,21 @@ class _DrawingPainter extends CustomPainter {
 
     // Draw circles using the stored random positions
     for (var position in randomPositions) {
-      canvas.drawCircle(position, paint.strokeWidth / 2, paint);
+      canvas.drawCircle(position, AppConstants.crayonNibSize / 2, paint);
     }
   }
 
   /// Draws a custom shape for the crayon tool.
-  void _drawCrayon(Canvas canvas, DrawingPoint p1, DrawingPoint p2, Size size) {
+  void _drawPaintbrush(
+      Canvas canvas, DrawingPoint p1, DrawingPoint p2, Size size) {
     // final center = Offset(size.width / 2, size.height / 2);
     var paint = p1.paint;
     // var paint2 = p1.paintAlt;
-    var circleWidth = AppConstants.largeBrushSize / 2;
+    var circleWidth = paint.strokeWidth;
     developer.log('log me', name: 'my.app.category');
     developer.log('log me $circleWidth', name: 'my.app.category');
     var vertices = createVertices(p2.offset, circleWidth * 2);
-    canvas.drawVertices(vertices, BlendMode.srcIn, paint);
+    canvas.drawVertices(vertices, BlendMode.srcOver, paint);
 
     //`
     // paint.style = PaintingStyle.stroke;
